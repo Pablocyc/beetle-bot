@@ -39,7 +39,13 @@ int8_t pin_left[] = {2, 3, 4, 5};
 int8_t pin_right[] = {6, 7, 8, 9};
 #define pin_buzzer  11
 // Pin-in
-#define   pin_key   A0
+#define   pin_key     A0
+#define   btn_right   0
+#define   btn_up      1
+#define   btn_down    2
+#define   btn_left    3
+#define   btn_enter   4
+#define   btn_none    5
 
 
 // Variables
@@ -66,6 +72,19 @@ void loop() {
     if(value == 'r')  Right(number_steps);
     if(value == 'b')  Back(number_steps);
     if(value == 'f')  Forward(number_steps);
+  }
+  int read_key = ReadButtons();
+  if(read_key != btn_none) {
+    if(read_key == btn_right)
+      Serial.println("BTN-RIGHT");
+    if(read_key == btn_up)
+      Serial.println("BTN-UP");
+    if(read_key == btn_down)
+      Serial.println("BTN-DOWN");
+    if(read_key == btn_left)
+      Serial.println("BTN-LEFT");
+    if(read_key == btn_enter)
+      Serial.println("BTN-ENTER");
   }
 }
 
@@ -122,10 +141,24 @@ void Forward(int cont) {
   }
   Off();
 }
-
 void Off() {
   for(int8_t i=0; i<4; i++) {
     digitalWrite(pin_left[i], LOW);
     digitalWrite(pin_right[i], LOW);
   }
+}
+
+int ReadButtons() {
+  int adc_key = analogRead(pin_key);
+  if(adc_key < 1000) {
+    Serial.print("adc_key: ");
+    Serial.println(adc_key);
+  }
+  delay(50);
+  if(adc_key < 50)   return btn_right;
+  if(adc_key < 250)  return btn_up;
+  if(adc_key < 380)  return btn_down;
+  if(adc_key < 555)  return btn_left;
+  if(adc_key < 800)  return btn_enter;
+  return btn_none;
 }

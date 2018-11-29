@@ -22,7 +22,7 @@
 *     IN2: D7                                                     *
 *     IN3: D8                                                     *
 *     IN4: D9                                                     *
-*    Buzzer: D13                                                  *
+*    Buzzer: D11                                                  *
 *                                                                 *
 *******************************************************************
 *                      PIN-IN                                     *
@@ -37,14 +37,21 @@
 // Pin-out
 int8_t pin_left[] = {2, 3, 4, 5};
 int8_t pin_right[] = {6, 7, 8, 9};
+#define pin_buzzer  11
 // Pin-in
 #define   pin_key   A0
 
 
 // Variables
 unsigned int cont = 0;
+int frequency = 3000;
+int time_on;
+int time_off;
+int repeat;
+unsigned long currentTime;
 bool flag_right;
 bool flag_enable;
+bool flag_tone;
 
 void setup() {
   for(int8_t i=0; i<sizeof(pin_left); i++) {
@@ -57,24 +64,29 @@ void setup() {
 }
 
 void loop() {
-  if(Serial.available()) {
-    char value = Serial.read();
-    delay(2);
-    Serial.println(value);
-    if(value == 'a')
-      flag_right = true;
-    if(value == 'b')
-      flag_right = false;
-    flag_enable = true;
-    if(value == 'x')
-      flag_enable = false, Off();
+  while(Serial.available()) {
+    int f = Serial.parseInt();
+    int on = Serial.parseInt();
+    int off = Serial.parseInt();
+    int n = Serial.parseInt();
+
+    if(Serial.read() == 't') {
+      frequency = f;
+      time_on = on;
+      time_off = off;
+      repeat = n;
+      flag_tone = true;
+    }
   }
 
-  if(flag_enable) {
-    if(flag_right)
-      Right();
-    else
-      Left();
+  if(flag_tone) {
+    if(millis() > currentTime + time_on + time_off) {
+      currentTime = millis();
+      tone(pin_buzzer, frequency, time_on);
+      repeat--;
+      if(repeat <= 0)
+        flag_tone = false;
+    }
   }
 
 }

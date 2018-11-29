@@ -47,12 +47,34 @@ int8_t pin_right[] = {6, 7, 8, 9};
 #define   btn_enter   4
 #define   btn_none    5
 
-
-// Variables
+// Variables Global
+int addr = 0;
+int time_buttons = 500;
 unsigned long currentTime;
-bool flag_right;
-bool flag_enable;
-bool flag_tone;
+bool flag_enable_buttons;
+bool flag_new_sequence;
+// Variables Tones
+int tone_buttons = 3800;
+int duration_buttons = 300;
+int tone_enter = 3300;
+int duration_on_off = 100;
+int repeat_on_off = 5;
+int tone_run = 3000;
+int duration_run = 200;
+int tone_cancel = 4000;
+int duration_cancel = 1000;
+// Variables keypad
+char up    = 'u';
+char right = 'r';
+char down  = 'd';
+char left  = 'l';
+char enter = 'e';
+char end   = '$';
+// Variables stepping motors
+int number_steps_turn = 500;
+int number_steps_motor = 1024;
+
+
 
 void setup() {
   for(int8_t i=0; i<sizeof(pin_left); i++) {
@@ -62,30 +84,80 @@ void setup() {
   Off();
   Serial.begin(115200);
   Serial.println("BEETLE-BOT");
+
+  EEPROM.write(0,addr);
 }
 
 void loop() {
-  while(Serial.available()>0) {
-    int number_steps = Serial.parseInt();
+  while(Serial.available()) {
+    int steps = Serial.parseInt();
     int value = Serial.read();
-    if(value == 'l')  Left(number_steps);
-    if(value == 'r')  Right(number_steps);
-    if(value == 'b')  Back(number_steps);
-    if(value == 'f')  Forward(number_steps);
+    if(value == 't')  number_steps_turn = steps;
+    if(value == 's')  number_steps_motor = steps;
   }
-  int read_key = ReadButtons();
+
+  if(flag_enable_buttons)
+    int read_key = ReadButtons();
   if(read_key != btn_none) {
+    if(read_key == btn_enter) {
+      int cont = 0;
+      while(ReadButtons() == btn_enter) {
+        cont++;
+        delay(1);
+        if(cont > time_clear_sequence) {
+          tone(tone_cancel, duration_cancel);
+          Clear();
+        }
+      }
+      Enter();
+    }
+    else {
+      if(flag_new_sequence)
+        Clear();
+      tone(tone_buttons, duration_buttons);
+      addr++;
+      EEPROM.write(0, addr);
+    }
     if(read_key == btn_right)
-      Serial.println("BTN-RIGHT");
+      EEPROM.write(addr, right);
     if(read_key == btn_up)
-      Serial.println("BTN-UP");
+      EEPROM.write(addr, up);
     if(read_key == btn_down)
-      Serial.println("BTN-DOWN");
+      EEPROM.write(addr, down);
     if(read_key == btn_left)
-      Serial.println("BTN-LEFT");
-    if(read_key == btn_enter)
-      Serial.println("BTN-ENTER");
+      EEPROM.write(addr, left);
   }
+  if(millis() > currentTime + time_buttons)
+    flag_enable_buttons = true;
+}
+
+void Enter() {
+  if(EEPROM.read(0) > 0) {
+    flag_new_sequence = true;
+    int cont = EEPROM.read(0);
+    for(int i=1; i<=cont; i++) {
+      tone(tone_run, duration_run);
+      int value = EEPROM.read(i);
+      if(value == up)
+        Forward(number_steps_motor);
+      if(value == right)
+        Right(number_steps_turn);
+      if(value == left)
+        Left(number_steps_turn);
+      if(value == down)
+        Back(number_steps_motor);
+    }
+
+    for(int i=0; i<repeat_on_off; i++) {
+      tone(tone_enter, duration_on_off);
+      delay(duration_on_off * 2);
+    }
+  }
+}
+void Clear() {
+  addr = 0;
+  EEPROM.write(0, addr);
+  flag_new_sequence = false;
 }
 
 
@@ -150,11 +222,12 @@ void Off() {
 
 int ReadButtons() {
   int adc_key = analogRead(pin_key);
-  if(adc_key < 1000) {
+  if(adc_key < 800) {
     Serial.print("adc_key: ");
     Serial.println(adc_key);
+    currentTime = millis();
+    flag_enable_buttons = false;
   }
-  delay(50);
   if(adc_key < 50)   return btn_right;
   if(adc_key < 250)  return btn_up;
   if(adc_key < 380)  return btn_down;

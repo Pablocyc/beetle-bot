@@ -42,6 +42,7 @@ int8_t pin_right[] = {6, 7, 8, 9};
 
 
 // Variables
+unsigned int cont = 0;
 bool flag_right;
 bool flag_enable;
 
@@ -66,7 +67,7 @@ void loop() {
       flag_right = false;
     flag_enable = true;
     if(value == 'x')
-      Off(), flag_enable = false;
+      flag_enable = false, Off();
   }
 
   if(flag_enable) {
@@ -84,6 +85,7 @@ void Right() {
     digitalWrite(pin_left[i], HIGH);
     delay(2);
   }
+  cont++;
 }
 void Left() {
   for(int i=3; i>=0; i--) {
@@ -91,6 +93,7 @@ void Left() {
     digitalWrite(pin_left[i], HIGH);
     delay(2);
   }
+  cont++;
 }
 
 void Off() {
@@ -98,4 +101,6 @@ void Off() {
     digitalWrite(pin_left[i], LOW);
     digitalWrite(pin_right[i], LOW);
   }
+  if(!flag_enable)
+    Serial.println(cont), cont = 0;
 }
